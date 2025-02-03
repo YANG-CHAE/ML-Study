@@ -128,7 +128,7 @@ y_pred = svm_clf.predict(X_train)
 accuracy_score(y_train, y_pred)
 
 
-#9
+#10
 from sklearn.datasets import fetch_california_housing
 
 housing = fetch_california_housing()
