@@ -13,68 +13,82 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 
+from sklearn.svm import SVC, LinearSVC
+from sklearn.linear_model import SGDClassifier
+from sklearn.preprocessing import StandardScaler
+
 iris = datasets.load_iris()
 X = iris["data"][:, (2, 3)]  # 꽃잎 길이, 꽃잎 넓이
 y = iris["target"]
 
-svm_clf = Pipeline([
+lin_clf = Pipeline([
     ("scaler", StandardScaler()),
     ("linear_svc", LinearSVC(C=1, loss="hinge")),
 ])
+lin_clf.fit(X, y)
+
+svm_clf = Pipeline([
+    ("scaler", StandardScaler()),
+    ("svc", SVC(kernel="linear",C=1)),
+])
 svm_clf.fit(X, y)
 
-svm_clf.predict([[5.5, 1.7]])
-
-y_pred_svm = svm_clf.predict(X_test)  # 테스트 세트에 대한 예측
-accuracy_svm = accuracy_score(y_test, y_pred_svm)
-
-def plot_dataset(X, y):
-    plt.plot(X[:, 0][y==0], X[:, 1][y==0], "bs")   # 파랑 네모: 음성 데이터
-    plt.plot(X[:, 0][y==1], X[:, 1][y==1], "g^")   # 초록 세모: 양성 데이터
-
-    plt.grid(True, which='both')
-
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import PolynomialFeatures
-
-
-polynomial_svm_clf = Pipeline([
-    ("poly_features", PolynomialFeatures(degree=3)),
+sgd_clf = Pipeline([
     ("scaler", StandardScaler()),
-    ("svm_clf", LinearSVC(C=20, loss="hinge"))
+    ("sgd", SGDClassifier(loss="hinge", learning_rate="constant", eta0=0.001, alpha=alpha,
+                        max_iter=1000, tol=1e-3, random_state=42)),
 ])
-polynomial_svm_clf.fit(X,y)
+sgd_clf.fit(X, y)
+
+lin_model = lin_clf[-1]  
+svm_model = svm_clf[-1]  
+sgd_model = sgd_clf[-1] 
 
 
-plot_dataset(X, y)
+lin_scaler = lin_clf.named_steps["scaler"]
+svm_scaler = svm_clf.named_steps["scaler"]
+sgd_scaler = sgd_clf.named_steps["scaler"]
+
+
+w1 = -lin_model.coef_[0, 0] / lin_model.coef_[0, 1]
+b1 = -lin_model.intercept_[0] / lin_model.coef_[0, 1]
+
+
+w2 = -svm_model.coef_[0, 0] / svm_model.coef_[0, 1]
+b2 = -svm_model.intercept_[0] / svm_model.coef_[0, 1]
+
+
+w3 = -sgd_model.coef_[0, 0] / sgd_model.coef_[0, 1]
+b3 = -sgd_model.intercept_[0] / sgd_model.coef_[0, 1]
+
+
+line1 = lin_scaler.inverse_transform([
+    [-10, -10 * w1 + b1],
+    [ 10,  10 * w1 + b1]
+])
+line2 = svm_scaler.inverse_transform([
+    [-10, -10 * w2 + b2],
+    [ 10,  10 * w2 + b2]
+])
+line3 = sgd_scaler.inverse_transform([
+    [-10, -10 * w3 + b3],
+    [ 10,  10 * w3 + b3]
+])
+
+
+plt.figure(figsize=(11, 4))
+
+# 결정 경계
+plt.plot(line1[:, 0], line1[:, 1], "k:", label="LinearSVC")
+plt.plot(line2[:, 0], line2[:, 1], "b--", linewidth=2, label="SVC")
+plt.plot(line3[:, 0], line3[:, 1], "r-", label="SGDClassifier")
+
+
+plt.plot(X[:, 0][y==1], X[:, 1][y==1], "bs", label="Iris versicolor")
+plt.plot(X[:, 0][y==0], X[:, 1][y==0], "yo", label="Iris setosa")
+
+plt.xlabel("Petal length", fontsize=14)
+plt.ylabel("Petal width", fontsize=14)
+plt.legend(loc="upper center", fontsize=14)
+plt.axis([0, 5.5, 0, 2])  # 범위는 상황에 따라 조정
 plt.show()
-
-def plot_predictions(clf, axes):
-    x0s = np.linspace(axes[0], axes[1], 100)
-    x1s = np.linspace(axes[2], axes[3], 100)
-    x0, x1 = np.meshgrid(x0s, x1s)  
-    X = np.c_[x0.ravel(), x1.ravel()] 
-    
-    y_pred = clf.predict(X).reshape(x0.shape)
-
-    y_decision = clf.decision_function(X).max(axis=1).reshape(x0.shape)  
-    plt.contourf(x0, x1, y_pred, cmap=plt.cm.brg, alpha=0.2)      
-    plt.contourf(x0, x1, y_decision, cmap=plt.cm.brg, alpha=0.1)  # 등고선 그리기
-
-
-# 그래프 축 범위 정의
-axes = [0, 7, 0, 3] 
-
-
-plot_predictions(polynomial_svm_clf, axes) 
-plot_dataset(X, y)
-
-
-plt.show()
-
-
-y_pred_poly = polynomial_svm_clf.predict(X_test)
-accuracy_poly = accuracy_score(y_test, y_pred_poly)
-
-print("LinearSVC 정확도:", accuracy_svm)
-print("Polynomial SVC 정확도:", accuracy_poly)
