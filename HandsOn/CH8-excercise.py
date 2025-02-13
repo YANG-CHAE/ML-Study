@@ -44,3 +44,59 @@ import matplotlib.pyplot as plt
 
 plt.plot(cumsum)
 plt.plot(cumsum_reduced)
+
+#10
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.manifold import TSNE, LocallyLinearEmbedding, MDS
+from sklearn.decomposition import PCA
+from sklearn.datasets import fetch_openml
+
+mnist = fetch_openml('mnist_784', version=1, as_frame=False)
+X, y = mnist["data"], mnist["target"]
+
+
+y = y.astype(int)  
+
+random_indices = np.random.choice(X.shape[0],  5000 , replace=False)
+X_sample, y_sample = X[random_indices], y[random_indices]
+
+
+tsne = TSNE(n_components=2, random_state=42, perplexity=30, learning_rate=200)
+X_tsne = tsne.fit_transform(X_sample)
+
+
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X_sample)
+
+
+mds = MDS(n_components=2, random_state=42)
+X_mds = mds.fit_transform(X_sample)
+
+def plot_scatter(X_transformed, title, ax):
+    scatter = ax.scatter(X_transformed[:, 0], X_transformed[:, 1], c=y_sample, cmap='tab10', alpha=0.6, edgecolors='k')
+    ax.set_title(title)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    return scatter
+
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+plot_scatter(X_tsne, "t-SNE", axes[0, 0])
+plot_scatter(X_pca, "PCA", axes[0, 1])
+plot_scatter(X_lle, "LLE", axes[1, 0])
+plot_scatter(X_mds, "MDS", axes[1, 1])
+
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+
+
+
+
